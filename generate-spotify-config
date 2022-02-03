@@ -1,0 +1,77 @@
+#!/usr/bin/env python3
+
+import os
+from string import Template
+
+
+source_path = "./Switify/Core/Shared/Spotify"
+template_path = f"{source_path}/SpotifyAuth+Secret.swift.template"
+generated_path = f"{source_path}/SpotifyAuth+Secret.generated.swift"
+replacements = {}
+
+
+class colors:
+    HEADER = '\033[95m'
+    OKCYAN = '\033[96m'
+    FAIL = '\033[91m'
+    ENDC = '\033[0m'
+    BOLD = '\033[1m'
+
+
+def succeed(msg):
+    print(f"{colors.OKCYAN}{msg}{colors.ENDC}")
+
+
+def failed(msg):
+    print(f"{colors.FAIL}{msg}{colors.ENDC}")
+    exit(1)
+
+
+def check_env():
+    if os.path.isfile("./.env"):
+        with open("./.env", "r") as template_file:
+            lines = template_file.readlines()
+            for line in lines:
+                key, value = line.strip().split("=")
+                if not key or not value:
+                    reason = f"Check '{key}'" if key else ""
+                    failed(f"{colors.BOLD}Invalid `.env`:{colors.ENDC} Check your .env file. {reason}")
+                else:
+                    replacements[key] = value
+
+
+        succeed("Found .env file, using below configs")
+        for key, value in replacements.items():
+            print(f"{colors.BOLD}{key}:{colors.ENDC} {value}")
+    else:
+        failed("No .env file found, copy `.env.example` as `.env` and fillout secrets")
+
+
+def load_template():
+    if not os.path.isfile(template_path):
+        failed(f"Can not find template file in{colors.ENDC} {template_path}")
+    else:
+        with open(template_path, "r") as template_file:
+            template_content = template_file.read()
+            template = Template(template_content)
+            return template
+
+
+def generate_config(template):
+    try:
+        os.remove(generated_path)
+    except OSError:
+        pass
+
+    with open(generated_path, "w") as generated_file:
+        generated_file.write(template.substitute(replacements))
+
+
+
+if __name__ == "__main__":
+    print(f"{colors.HEADER}Generating config file for Spotify...{colors.ENDC}")
+    check_env()
+    template = load_template()
+    generate_config(template)
+    succeed("Successfully generated config file for Spotify.")
+    exit(0)
